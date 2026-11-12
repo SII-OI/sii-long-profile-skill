@@ -10,6 +10,14 @@
 
 先安装 Node.js 22.20 或更新版本。 [Skills CLI 安装要求](https://github.com/vercel-labs/skills#install-a-skill)
 
+```sh
+npx skills add SII-OI/sii-long-profile-skill -g
+```
+
+CLI 会自动选中仓库里的 Skill，并检测本机 Agent。出现选择提示时，选你平时使用的 Agent。`-g` 将 Skill 安装到用户目录，换项目也能用。只在一个项目里用时，在该项目目录运行并省略 `-g`。
+
+需要指定 Agent 时，才在安装命令末尾加上表中的 `-a` 参数。
+
 | Agent | `-a` 参数 | 用户级 Skill 目录 |
 | --- | --- | --- |
 | Codex | `codex` | `~/.agents/skills/` |
@@ -24,13 +32,7 @@
 
 安装参数和目录可在官方文档核对。 [Skills CLI 的 Agent 列表](https://github.com/vercel-labs/skills/blob/main/docs/agents.md) · [Kimi Code CLI](https://www.kimi.com/code/docs/kimi-code-cli/customization/skills.html) · [ZCode](https://zcode.z.ai/cn/docs/skill)
 
-以下命令以 Codex 为例。使用其他 Agent 时，把 `-a codex` 中的 `codex` 换成表中的参数。
-
-```sh
-npx skills add SII-OI/sii-long-profile-skill --skill sii-long-profile -a codex -g
-```
-
-安装后，打开 Agent 的本地会话并查看 Skill 列表。列表里出现 `sii-long-profile` 即可继续配置。如果列表还未刷新，请重启该 Agent。
+安装后，可以运行 `npx skills ls -g` 查看用户级 Skill，或在所选 Agent 的 Skill 列表里搜索 `sii-long-profile`。项目级安装用 `npx skills ls`。确认已安装后，按第 2 节配置令牌。如果 Agent 的列表还未刷新，请重开会话。 [查看已安装的 Skill](https://github.com/vercel-labs/skills/blob/main/docs/commands.md#skills-list)
 
 ### DeepSeek Harness 和 WorkBuddy
 
@@ -83,5 +85,7 @@ cd sii-long-profile-source
 - 找到我指定的论文，预览发表渠道的修改，等我确认后再保存草稿。
 
 保存成功后，可在创智龙「我的科研资料」看到草稿。送审前，Skill 会列出本次要提交的全部待提交草稿，其中也包括网页上已保存的草稿。
+
+也可以在本机终端进入 Skill 目录，运行 `uv run --script scripts/research_profile.py list`，直接查看本人的论文和项目。脚本在本机运行，读取和修改科研资料时会调用创智龙 API，需要联网。
 
 更多命令和字段见 [Skill 说明](SKILL.md) 与 [成果字段](references/fields.md)。
