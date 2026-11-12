@@ -64,7 +64,9 @@ cd sii-long-profile-source
 
 ## 2. 配置创智龙令牌
 
-创智小龙账号需已核验并关联本人教师档案。
+Skill 默认连接开发机。请在开发机生成令牌，账号需已核验并关联本人教师档案。 [打开创智小龙开发机](https://118.196.149.115:8430/)
+
+开发机使用自签名证书。若 Python 尚未信任该证书，先向运维获取可信的 PEM 证书，再将 `SSL_CERT_FILE` 设置为证书的绝对路径。macOS 终端使用 `export SSL_CERT_FILE="/证书的实际路径.pem"`，Windows PowerShell 使用 `$env:SSL_CERT_FILE = "C:/证书的实际路径.pem"`。使用 Agent 调用时，运行脚本的进程也需要信任这张证书。
 
 在本机终端进入包含 `SKILL.md` 和 `scripts/` 的 Skill 目录。以 Codex 的用户级安装为例，运行 `cd ~/.agents/skills/sii-long-profile`。WorkBuddy 用户可在生成 ZIP 时使用的下载目录运行下面的命令。
 
@@ -77,7 +79,7 @@ cd sii-long-profile-source
    uv run --script scripts/research_profile.py configure
    ```
 
-3. 用飞书登录创智小龙，进入「设置 → API 令牌」，生成并复制自己的 API Key。看到本机终端提示「粘贴创智龙 API 令牌（输入不显示）」后，粘贴令牌并按回车。验证通过后，脚本会将令牌保存到 macOS 钥匙串或 Windows 凭据管理器。 
+3. 用飞书登录创智小龙开发机，进入「设置 → API 令牌」，生成并复制自己的 API Key。看到本机终端提示「粘贴创智龙 API 令牌（输入不显示）」后，粘贴令牌并按回车。验证通过后，脚本会将令牌保存到 macOS 钥匙串或 Windows 凭据管理器。
 4. 在同一目录运行 `check`，确认授权成功。
 
    ```sh

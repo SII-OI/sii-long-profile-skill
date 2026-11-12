@@ -9,13 +9,13 @@ description: 通过创智龙 API 维护导师本人的论文与项目。用于�
 
 ## 首次配置
 
-导师需在创智龙「设置 → API 令牌」生成并复制令牌。在本机终端进入 Skill 文件夹，使用已安装的 `uv` 运行：
+默认连接开发机 `https://118.196.149.115:8430`。导师先在开发机的「设置 → API 令牌」生成并复制令牌。开发机使用自签名证书，若 Python 尚未信任它，先向运维获取可信证书，再为运行脚本的终端或 Agent 设置 `SSL_CERT_FILE`。在本机终端进入 Skill 文件夹，使用已安装的 `uv` 运行：
 
 ```sh
 uv run --script scripts/research_profile.py configure
 ```
 
-按终端提示粘贴令牌。macOS 使用钥匙串，Windows 使用凭据管理器。看到自己的姓名和档案 ID 后即可使用。默认连接 `https://oi.scion.org.cn/cz-long`。配置测试环境时，用 `--base-url` 指定签发令牌的服务地址和部署前缀，例如 `--base-url http://localhost:4321`。远程服务使用 HTTPS。用 `check` 检查配置，令牌过期或撤销后，用新令牌再运行一次 `configure`。
+按终端提示粘贴令牌。macOS 使用钥匙串，Windows 使用凭据管理器。看到自己的姓名和档案 ID 后即可使用。连接其他实例时，用 `--base-url` 指定签发令牌的服务地址和部署前缀，例如 `--base-url http://localhost:4321`。远程服务使用 HTTPS。用 `check` 检查配置，令牌过期或撤销后，用新令牌再运行一次 `configure`。
 
 ## 查询和保存草稿
 

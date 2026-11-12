@@ -18,7 +18,7 @@ from uuid import uuid4
 import warnings
 
 
-DEFAULT_BASE = 'https://oi.scion.org.cn/cz-long'
+DEFAULT_BASE = 'https://118.196.149.115:8430'
 CONTRIBUTIONS = '/oi/api/me/research-contributions'
 KEYRING_SERVICE = 'cn.org.scion.cz-long.research-profile'
 KEYRING_ACCOUNT = 'research-api'
