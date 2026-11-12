@@ -10,15 +10,17 @@ from http.client import HTTPException
 import json
 from pathlib import Path
 import re
+import ssl
 import sys
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, ProxyHandler, Request, build_opener
 from uuid import uuid4
 import warnings
 
 
 DEFAULT_BASE = 'https://118.196.149.115:8430'
+DEVELOPMENT_CERT = Path(__file__).resolve().parent / 'certs' / 'cz-long-118-8430.pem'
 CONTRIBUTIONS = '/oi/api/me/research-contributions'
 KEYRING_SERVICE = 'cn.org.scion.cz-long.research-profile'
 KEYRING_ACCOUNT = 'research-api'
@@ -68,6 +70,12 @@ def request(config, path=CONTRIBUTIONS, body=None):
     handlers = [NoRedirect()]
     if query.type == 'http':
         handlers.append(ProxyHandler({}))
+    elif urlsplit(config['base_url']).netloc == urlsplit(DEFAULT_BASE).netloc:
+        try:
+            context = ssl.create_default_context(cafile=DEVELOPMENT_CERT)
+        except OSError:
+            raise ClientError('Skill 附带的开发机证书缺失或无效，请更新或重新安装 Skill。') from None
+        handlers.append(HTTPSHandler(context=context))
     try:
         with build_opener(*handlers).open(query, timeout=20) as response:
             result = json.load(response)

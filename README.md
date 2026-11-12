@@ -66,7 +66,9 @@ cd sii-long-profile-source
 
 Skill 默认连接开发机。请在开发机生成令牌，账号需已核验并关联本人教师档案。 [打开创智小龙开发机](https://118.196.149.115:8430/)
 
-开发机使用自签名证书。若 Python 尚未信任该证书，先向运维获取可信的 PEM 证书，再将 `SSL_CERT_FILE` 设置为证书的绝对路径。macOS 终端使用 `export SSL_CERT_FILE="/证书的实际路径.pem"`，Windows PowerShell 使用 `$env:SSL_CERT_FILE = "C:/证书的实际路径.pem"`。使用 Agent 调用时，运行脚本的进程也需要信任这张证书。
+脚本会自动使用随 Skill 安装的开发机证书。升级 Skill 后，已配置令牌的用户可以直接运行 `check`。开发机换证后，维护者需要用运维提供的新公开证书替换 `scripts/certs/cz-long-118-8430.pem`，用户更新 Skill 后即可继续使用。
+
+如果用 `--base-url` 连接其他实例，而该实例使用自签名证书，请向运维获取可信 PEM 证书，再将运行脚本的进程的 `SSL_CERT_FILE` 设置为证书的绝对路径。
 
 在本机终端进入包含 `SKILL.md` 和 `scripts/` 的 Skill 目录。以 Codex 的用户级安装为例，运行 `cd ~/.agents/skills/sii-long-profile`。WorkBuddy 用户可在生成 ZIP 时使用的下载目录运行下面的命令。
 
