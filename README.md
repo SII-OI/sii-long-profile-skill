@@ -64,7 +64,7 @@ cd sii-long-profile-source
 
 ## 2. 配置创智龙令牌
 
-用飞书登录 [创智龙](https://oi.scion.org.cn/cz-long/)，进入「设置 → API 令牌」，生成并复制自己的令牌。账号需已核验并关联本人教师档案。
+创智小龙账号需已核验并关联本人教师档案。
 
 在本机终端进入包含 `SKILL.md` 和 `scripts/` 的 Skill 目录。以 Codex 的用户级安装为例，运行 `cd ~/.agents/skills/sii-long-profile`。WorkBuddy 用户可在生成 ZIP 时使用的下载目录运行下面的命令。
 
@@ -75,6 +75,27 @@ cd sii-long-profile-source
 
    ```sh
    uv run --script scripts/research_profile.py configure
+   ```
+
+3. 用飞书登录创智小龙，进入「设置 → API 令牌」，生成并复制自己的 API Key。看到本机终端提示「粘贴创智龙 API 令牌（输入不显示）」后，粘贴令牌并按回车。验证通过后，脚本会将令牌保存到 macOS 钥匙串或 Windows 凭据管理器。 [打开创智小龙](https://oi.scion.org.cn/cz-long/)
+4. 在同一目录运行 `check`，确认授权成功。
+
+   ```sh
+   uv run --script scripts/research_profile.py check
+   ```
+
+   返回的 `profile.name` 和 `profile.id` 应对应本人的教师档案。成功返回示例如下，档案 ID 和成果数量以实际返回为准。
+
+   ```json
+   {
+     "profile": {
+       "id": "manual:0123456789abcdef01234567",
+       "name": "示例导师"
+     },
+     "binding_revision": 1,
+     "archived_count": 0,
+     "record_count": 2
+   }
    ```
 
 ### 使用 Python 配置（无需 uv）
@@ -97,13 +118,9 @@ py -3 -m venv "$HOME/.sii-long-profile-venv"
 & "$HOME/.sii-long-profile-venv/Scripts/python.exe" scripts/research_profile.py configure
 ```
 
-继续使用这套环境时，在 Agent 对话里明确指定用该虚拟环境的 Python 运行 Skill 脚本。当前 `SKILL.md` 的默认运行方式是 `uv run --script`。
+按上面的第 3 步生成并粘贴令牌，再把对应 Python 命令末尾的 `configure` 换成 `check`，按第 4 步核对返回的档案。继续使用这套环境时，在 Agent 对话里明确指定用该虚拟环境的 Python 运行 Skill 脚本。当前 `SKILL.md` 的默认运行方式是 `uv run --script`。
 
-### 确认配置成功
-
-等终端提示后粘贴令牌，输入不会回显。终端显示本人的姓名和档案 ID，说明验证成功，令牌已保存到 macOS 钥匙串或 Windows 凭据管理器。
-
-把所用配置命令末尾的 `configure` 换成 `check`，可以随时检查连接。令牌过期或撤销后，在创智龙生成新令牌，再运行 `configure`。
+令牌过期或撤销后，在创智小龙生成新令牌，再运行 `configure`。
 
 ## 3. 在 Agent 中使用
 
