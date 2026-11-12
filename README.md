@@ -77,7 +77,7 @@ cd sii-long-profile-source
    uv run --script scripts/research_profile.py configure
    ```
 
-3. 用飞书登录创智小龙，进入「设置 → API 令牌」，生成并复制自己的 API Key。看到本机终端提示「粘贴创智龙 API 令牌（输入不显示）」后，粘贴令牌并按回车。验证通过后，脚本会将令牌保存到 macOS 钥匙串或 Windows 凭据管理器。 [打开创智小龙](https://oi.scion.org.cn/cz-long/)
+3. 用飞书登录创智小龙，进入「设置 → API 令牌」，生成并复制自己的 API Key。看到本机终端提示「粘贴创智龙 API 令牌（输入不显示）」后，粘贴令牌并按回车。验证通过后，脚本会将令牌保存到 macOS 钥匙串或 Windows 凭据管理器。 
 4. 在同一目录运行 `check`，确认授权成功。
 
    ```sh
