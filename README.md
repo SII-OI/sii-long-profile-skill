@@ -4,7 +4,7 @@
 
 ## 1. 安装
 
-在 macOS 或 Windows 上安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，并使用能运行本机命令、访问当前系统用户凭据库的 Agent 会话。如果仓库是私有的，请先在本机配置有读取权限的 GitHub 凭据。
+在 macOS 或 Windows 上使用能运行本机脚本的 Agent 会话。配置令牌时推荐使用 `uv`，安装方法见第 2 节。如果仓库是私有的，请先在本机配置有读取权限的 GitHub 凭据。
 
 ### 用 Skills CLI 安装
 
@@ -64,17 +64,46 @@ cd sii-long-profile-source
 
 ## 2. 配置创智龙令牌
 
-1. 用飞书登录 [创智龙](https://oi.scion.org.cn/cz-long/)，进入「设置 → API 令牌」，生成并复制自己的令牌。账号需已核验并关联本人教师档案。
-2. 在本机终端进入包含 `SKILL.md` 和 `scripts/` 的 Skill 目录，再运行配置命令。WorkBuddy 用户可以直接在下载目录运行 `uv run --script scripts/research_profile.py configure`。下面以 Codex 的目录为例。
+用飞书登录 [创智龙](https://oi.scion.org.cn/cz-long/)，进入「设置 → API 令牌」，生成并复制自己的令牌。账号需已核验并关联本人教师档案。
+
+在本机终端进入包含 `SKILL.md` 和 `scripts/` 的 Skill 目录。以 Codex 的用户级安装为例，运行 `cd ~/.agents/skills/sii-long-profile`。WorkBuddy 用户可在生成 ZIP 时使用的下载目录运行下面的命令。
+
+### 使用 uv（推荐）
+
+1. 如果还没装 `uv`，在 macOS 上可以用 Homebrew 运行 `brew install uv`，在 Windows 上可以运行 `winget install --id=astral-sh.uv -e`。如果没有对应的包管理器，按官方文档使用独立安装方式。装完重新打开终端，运行 `uv --version`，看到版本号后回到 Skill 目录。 [uv 官方安装说明](https://docs.astral.sh/uv/getting-started/installation/)
+2. 在 Skill 目录运行配置命令。
 
    ```sh
-   cd ~/.agents/skills/sii-long-profile
    uv run --script scripts/research_profile.py configure
    ```
 
-3. 按终端提示粘贴令牌。输入不会回显。脚本会把令牌保存到 macOS 钥匙串或 Windows 凭据管理器。终端显示本人的姓名和档案 ID，说明连接成功。
+### 使用 Python 配置（无需 uv）
 
-随时可以在同一目录运行 `uv run --script scripts/research_profile.py check` 检查连接。令牌过期或撤销后，在创智龙生成新令牌并重新运行 `configure`。
+如果本机已有 Python 3.11 或更新版本，可以在 Skill 目录执行对应系统的命令。虚拟环境建在用户目录，供后续运行脚本使用。
+
+**macOS**
+
+```sh
+python3 -m venv "$HOME/.sii-long-profile-venv"
+"$HOME/.sii-long-profile-venv/bin/python" -m pip install "keyring>=25,<26"
+"$HOME/.sii-long-profile-venv/bin/python" scripts/research_profile.py configure
+```
+
+**Windows PowerShell**
+
+```powershell
+py -3 -m venv "$HOME/.sii-long-profile-venv"
+& "$HOME/.sii-long-profile-venv/Scripts/python.exe" -m pip install "keyring>=25,<26"
+& "$HOME/.sii-long-profile-venv/Scripts/python.exe" scripts/research_profile.py configure
+```
+
+继续使用这套环境时，在 Agent 对话里明确指定用该虚拟环境的 Python 运行 Skill 脚本。当前 `SKILL.md` 的默认运行方式是 `uv run --script`。
+
+### 确认配置成功
+
+等终端提示后粘贴令牌，输入不会回显。终端显示本人的姓名和档案 ID，说明验证成功，令牌已保存到 macOS 钥匙串或 Windows 凭据管理器。
+
+把所用配置命令末尾的 `configure` 换成 `check`，可以随时检查连接。令牌过期或撤销后，在创智龙生成新令牌，再运行 `configure`。
 
 ## 3. 在 Agent 中使用
 
