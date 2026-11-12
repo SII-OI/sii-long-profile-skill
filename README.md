@@ -4,9 +4,11 @@
 
 ## 1. 安装
 
-在 macOS 或 Windows 上使用支持 Agent Skills、能调用本机终端的 Agent。先安装 Node.js 22.20 或更新版本，以及 [uv](https://docs.astral.sh/uv/getting-started/installation/)。如果仓库是私有的，请先确认本机已配置有读取权限的 GitHub 凭据。 [Skills CLI 安装要求](https://github.com/vercel-labs/skills#install-a-skill)
+在 macOS 或 Windows 上安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，并使用能运行本机命令、访问当前系统用户凭据库的 Agent 会话。如果仓库是私有的，请先在本机配置有读取权限的 GitHub 凭据。
 
-### 本地 Agent 安装目标
+### 用 Skills CLI 安装
+
+先安装 Node.js 22.20 或更新版本。 [Skills CLI 安装要求](https://github.com/vercel-labs/skills#install-a-skill)
 
 | Agent | `-a` 参数 | 用户级 Skill 目录 |
 | --- | --- | --- |
@@ -17,8 +19,10 @@
 | GitHub Copilot | `github-copilot` | `~/.copilot/skills/` |
 | OpenCode | `opencode` | `~/.config/opencode/skills/` |
 | Windsurf | `windsurf` | `~/.codeium/windsurf/skills/` |
+| Kimi Code CLI | `kimi-code-cli` | `~/.agents/skills/` |
+| ZCode | `zcode` | `~/.zcode/skills/` |
 
-表中列的是 Skills CLI 提供的安装目标。已验证 macOS 本地脚本的令牌配置和连接检查，各 Agent 的端到端使用待实测。 [Skills CLI 的 Agent 列表](https://github.com/vercel-labs/skills/blob/main/docs/agents.md)
+安装参数和目录可在官方文档核对。 [Skills CLI 的 Agent 列表](https://github.com/vercel-labs/skills/blob/main/docs/agents.md) · [Kimi Code CLI](https://www.kimi.com/code/docs/kimi-code-cli/customization/skills.html) · [ZCode](https://zcode.z.ai/cn/docs/skill)
 
 以下命令以 Codex 为例。使用其他 Agent 时，把 `-a codex` 中的 `codex` 换成表中的参数。
 
@@ -28,10 +32,38 @@ npx skills add SII-OI/sii-long-profile-skill --skill sii-long-profile -a codex -
 
 安装后，打开 Agent 的本地会话并查看 Skill 列表。列表里出现 `sii-long-profile` 即可继续配置。如果列表还未刷新，请重启该 Agent。
 
+### DeepSeek Harness 和 WorkBuddy
+
+先安装 Git 并下载 Skill。如果 DeepSeek Harness 已经可以从 `~/.agents/skills/sii-long-profile/` 发现此 Skill，可以直接配置令牌。
+
+```sh
+git clone https://github.com/SII-OI/sii-long-profile-skill.git sii-long-profile-source
+cd sii-long-profile-source
+```
+
+#### DeepSeek Harness
+
+1. 在用户目录下创建 `~/.dsh/skills/sii-long-profile/`。如果设置了 `DSH_HOME`，则在该目录下创建 `skills/sii-long-profile/`。
+2. 从下载目录复制 `SKILL.md`、`scripts/` 和 `references/` 到上一步创建的目录，确保 `SKILL.md` 位于 `sii-long-profile/` 的第一层。
+3. 打开本地 Harness 会话，确认技能列表中出现 `sii-long-profile`，再进入复制后的目录配置令牌。 [DeepSeek Harness 技能发现规则](https://deepseek-harness.github.io/deepseek-harness/en/reference/subsystems/skills) · [默认目录说明](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/skill/skill-filesystem/README.md)
+
+#### WorkBuddy
+
+1. 在下载目录运行下面的命令，生成 `sii-long-profile.zip`。
+
+   ```sh
+   git archive --format=zip --prefix=sii-long-profile/ --output=sii-long-profile.zip HEAD SKILL.md scripts references
+   ```
+
+2. 在 WorkBuddy 打开「技能 → 添加技能 → 上传技能」，选择刚生成的 ZIP。确认已安装的技能列表中出现 `sii-long-profile`。 [WorkBuddy 技能导入说明](https://intl.cloud.tencent.com/zh/document/product/1316/84503)
+3. 在本机终端留在下载目录，按第 2 节配置令牌。之后在 WorkBuddy 的本地工作台调用 Skill。
+
+已在 macOS 上验证脚本的令牌配置和连接检查。各 Agent 内的安装和端到端调用待实测。
+
 ## 2. 配置创智龙令牌
 
 1. 用飞书登录 [创智龙](https://oi.scion.org.cn/cz-long/)，进入「设置 → API 令牌」，生成并复制自己的令牌。账号需已核验并关联本人教师档案。
-2. 在本机终端进入所选 Agent 的用户级 Skill 目录下的 `sii-long-profile`，运行配置命令。下面以 Codex 的目录为例。
+2. 在本机终端进入包含 `SKILL.md` 和 `scripts/` 的 Skill 目录，再运行配置命令。WorkBuddy 用户可以直接在下载目录运行 `uv run --script scripts/research_profile.py configure`。下面以 Codex 的目录为例。
 
    ```sh
    cd ~/.agents/skills/sii-long-profile
@@ -44,7 +76,7 @@ npx skills add SII-OI/sii-long-profile-skill --skill sii-long-profile -a codex -
 
 ## 3. 在 Agent 中使用
 
-打开 Agent 的本地会话，选择 `sii-long-profile`，试试下面的指令。
+打开 Agent 的本地会话，选择或点名使用 `sii-long-profile`。Kimi Code CLI 可输入 `/skill:sii-long-profile`，ZCode 可在「设置 → 技能」确认已启用。先试第一条指令，返回本人姓名后再尝试查询和修改成果。
 
 - 检查连接，告诉我当前关联的导师姓名。
 - 列出我的论文和项目，并标明审核状态。
