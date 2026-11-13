@@ -19,6 +19,7 @@ from uuid import uuid4
 import warnings
 
 
+VERSION = '0.1.0'
 DEFAULT_BASE = 'https://118.196.149.115:8430'
 DEVELOPMENT_CERT = Path(__file__).resolve().parent / 'certs' / 'cz-long-118-8430.pem'
 CONTRIBUTIONS = '/oi/api/me/research-contributions'
@@ -92,7 +93,7 @@ def request(config, path=CONTRIBUTIONS, body=None):
             message = detail if isinstance(detail, str) else '请求失败，请检查服务状态。'
             raise ClientError(f'HTTP {error.code}，{message.replace(config["token"], "[令牌]")}') from None
     except (OSError, HTTPException):
-        raise ClientError('未收到服务响应。若刚保存或送审，请先用 list 核对结果。') from None
+        raise ClientError('未收到服务响应。若刚送审，请用 list 核对结果。') from None
     except ValueError:
         raise ClientError('服务未返回预期的 JSON，请检查地址和部署版本。') from None
     if not isinstance(result, dict):
@@ -169,7 +170,9 @@ def record_for(data, item_id):
     raise ClientError('没有找到该成果 ID，请重新查询。')
 
 
-def plan_save(config, data, change):
+def submission_item(data, change):
+    if not isinstance(change, dict) or change.keys() - {'id', 'kind', 'fields'}:
+        raise ClientError('每条成果只接受 id、kind 和 fields。')
     patch = change.get('fields')
     if not isinstance(patch, dict) or not patch or not all(isinstance(value, str) for value in patch.values()):
         raise ClientError('请提供至少一个要修改的字段，字段值须为字符串。')
@@ -181,40 +184,56 @@ def plan_save(config, data, change):
         raise ClientError('请核对成果类型，kind 须为 paper 或 project。')
     if item.get('status') == 'pending':
         raise ClientError('这条成果正在审核，请等审核结束后再修改。')
-    payload = {'id': item['id'], 'kind': item['kind'], 'revision': item['revision'],
-               'binding_revision': data['binding_revision'], 'fields': {**item['fields'], **patch}}
+    fields = {**item['fields'], **{field: value.strip() for field, value in patch.items()}}
+    payload = {'id': item['id'], 'kind': item['kind'], 'revision': item['revision'], 'fields': fields}
     if item.get('source_id'):
         payload['source_id'] = item['source_id']
-    return {'action': 'save', 'base_url': config['base_url'], 'profile': data['profile'],
-            'changes': {field: {'before': item['fields'].get(field, ''), 'after': value}
-                        for field, value in patch.items()}, 'request': payload}
+    return payload, item['fields']
 
 
-def plan_submit(config, data):
-    drafts = [item for item in data['items'] if item['status'] == 'draft']
-    if not drafts:
-        raise ClientError('没有待提交的成果草稿。')
-    items = [{'id': item['id'], 'revision': item['revision']} for item in drafts]
+def plan_submit(config, data, change):
+    changes = change['items'] if change.keys() == {'items'} else [change]
+    if not isinstance(changes, list) or not changes:
+        raise ClientError('请提供至少一条要送审的成果。')
+    items, before = [], {}
+    for change in changes:
+        item, original = submission_item(data, change)
+        if item['id'] in before:
+            raise ClientError('同一成果出现多次，请合并改动后重新预览。')
+        before[item['id']] = original
+        items.append(item)
     return {'action': 'submit', 'base_url': config['base_url'], 'profile': data['profile'],
-            'drafts': [{**item, 'kind': draft['kind'],
-                        'name': draft['fields'].get('title') or draft['fields'].get('name', '')}
-                       for item, draft in zip(items, drafts)],
+            'before': before,
             'request': {'operation_id': str(uuid4()), 'binding_revision': data['binding_revision'], 'items': items}}
 
 
-def apply_plan(config, action, plan):
+def submit_plan(config, plan):
     profile = plan.get('profile')
-    if (plan.get('action') != action or not isinstance(plan.get('request'), dict)
+    if (plan.get('action') != 'submit' or not isinstance(plan.get('request'), dict)
             or not isinstance(profile, dict)):
-        raise ClientError('请传入对应的完整保存或送审计划。')
+        raise ClientError('请传入完整的送审计划。')
     if plan.get('base_url') != config['base_url'] or profile.get('id') != config['profile_id']:
         raise ClientError('当前配置与计划的服务或档案不同，请重新生成计划并确认。')
     payload = plan['request']
-    if action == 'save':
-        return request(config, body=payload)
-    result = request(config, CONTRIBUTIONS + '/submit', body=payload)
-    submitted_ids = {item['id'] for item in payload['items']}
-    return {'items': [item for item in result['items'] if item['id'] in submitted_ids]}
+    binding_revision = payload['binding_revision']
+    item_ids = {item['id'] for item in payload['items']}
+    current = listing(config)
+    if current['binding_revision'] != binding_revision:
+        raise ClientError('关联档案已变化，请重新预览并确认。')
+    if any(item['status'] == 'draft' and item['id'] not in item_ids for item in current['items']):
+        raise ClientError('网页还有本次未确认的待提交草稿。请先到「我的科研资料」处理，再重新预览送审。')
+    saved_items = [
+        request(config, body={**item, 'binding_revision': binding_revision})
+        for item in payload['items']
+    ]
+    result = request(config, CONTRIBUTIONS + '/submit', body={
+        'operation_id': payload['operation_id'], 'binding_revision': binding_revision,
+        'items': [{'id': item['id'], 'revision': item['revision']} for item in saved_items],
+    })
+    submitted = [item for item in result['items'] if item['id'] in item_ids and item.get('submission_id')]
+    if len(submitted) != len(item_ids):
+        raise ClientError('服务未返回送审编号，请用 list 核对结果。')
+    return {'items': submitted}
 
 
 def read_input(path):
@@ -230,17 +249,15 @@ def read_input(path):
 
 def main():
     parser = argparse.ArgumentParser(description='维护创智龙本人论文与项目')
+    parser.add_argument('--version', action='version', version=f'sii-long-profile {VERSION}',
+                        help='显示本机安装的 Skill 版本')
     commands = parser.add_subparsers(dest='command', required=True)
     setup = commands.add_parser('configure', help='在终端配置令牌并核对档案')
     setup.add_argument('--base-url', default=DEFAULT_BASE)
     commands.add_parser('check', help='核对令牌关联的档案')
-    commands.add_parser('list', help='读取本人档案和成果草稿')
-    commands.add_parser('prepare-submit', help='预览全部待提交草稿')
-    for command, help_text in (
-        ('prepare-save', '合并字段，生成保存计划'),
-        ('save', '执行已确认的保存计划'),
-        ('submit', '执行已确认的送审计划'),
-    ):
+    commands.add_parser('list', help='读取本人档案和成果审核状态')
+    for command, help_text in (('prepare-submit', '整理成果字段，生成送审预览'),
+                               ('submit', '提交已确认的成果送审')):
         commands.add_parser(command, help=help_text).add_argument('input', nargs='?', default='-')
     args = parser.parse_args()
     try:
@@ -249,16 +266,14 @@ def main():
             result = configure(store, args.base_url)
         else:
             config = load_config(store)
-            if args.command in {'save', 'submit'}:
-                result = apply_plan(config, args.command, read_input(args.input))
+            if args.command == 'submit':
+                result = submit_plan(config, read_input(args.input))
             else:
                 data = listing(config)
                 if args.command == 'check':
                     result = connection_summary(data)
-                elif args.command == 'prepare-save':
-                    result = plan_save(config, data, read_input(args.input))
                 elif args.command == 'prepare-submit':
-                    result = plan_submit(config, data)
+                    result = plan_submit(config, data, read_input(args.input))
                 else:
                     result = data
         print(json.dumps(result, ensure_ascii=False, indent=2))
