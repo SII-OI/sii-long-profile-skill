@@ -19,10 +19,16 @@ from uuid import uuid4
 import warnings
 
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 DEFAULT_BASE = 'https://118.196.149.115:8430'
 DEVELOPMENT_CERT = Path(__file__).resolve().parent / 'certs' / 'cz-long-118-8430.pem'
 CONTRIBUTIONS = '/oi/api/me/research-contributions'
+PROFILE = '/oi/api/me/research-profile'
+PROFILE_FIELDS = (
+    'bio', 'research_focus', 'homepage_url', 'scholar_url', 'github_url',
+    'huggingface_url', 'orcid_url', 'dblp_url', 'openalex_url', 'other_homepages',
+)
+PROFILE_STAMPS = ('revision', 'base_revision', 'source_hash', 'research_version', 'editorial_revision')
 KEYRING_SERVICE = 'cn.org.scion.cz-long.research-profile'
 KEYRING_ACCOUNT = 'research-api'
 TOKEN_PATTERN = re.compile(r'czl_sk_[A-Za-z0-9_-]{43}')
@@ -236,6 +242,56 @@ def submit_plan(config, plan):
     return {'items': submitted}
 
 
+def profile_document(config):
+    data = request(config, PROFILE)
+    profile = data.get('profile')
+    fields = data.get('fields')
+    if (not isinstance(profile, dict) or not profile.get('id') or not profile.get('name')
+            or type(data.get('binding_revision')) is not int or not isinstance(fields, dict)
+            or any(key not in data for key in PROFILE_STAMPS)
+            or any(not isinstance(fields.get(key, ''), str) for key in PROFILE_FIELDS)):
+        raise ClientError('服务未返回完整的个人资料，请确认已部署个人资料接口。')
+    if config.get('profile_id', profile['id']) != profile['id']:
+        raise ClientError('服务返回的档案与配置不符，请重新配置并核对姓名。')
+    return data
+
+
+def plan_profile(config, current, change):
+    if not isinstance(change, dict) or set(change) != {'fields'}:
+        raise ClientError('个人资料只接受 fields。')
+    patch = change['fields']
+    if not isinstance(patch, dict) or not patch or not all(isinstance(value, str) for value in patch.values()):
+        raise ClientError('请提供至少一个要修改的字段，字段值须为字符串。')
+    if set(patch) - set(PROFILE_FIELDS):
+        raise ClientError('个人资料只接受简介、研究方向和主页链接。')
+    before, after = {}, {}
+    for field, value in patch.items():
+        value = value.strip()
+        if value != current['fields'].get(field, ''):
+            before[field] = current['fields'].get(field, '')
+            after[field] = value
+    if not after:
+        raise ClientError('这些字段与当前资料相同。')
+    return {'action': 'submit-profile', 'base_url': config['base_url'], 'profile': current['profile'],
+            'binding_revision': current['binding_revision'], 'before': before, 'after': after,
+            'request': {'fields': after, 'operation_id': str(uuid4()),
+                        **{key: current[key] for key in PROFILE_STAMPS}}}
+
+
+def submit_profile(config, plan):
+    profile = plan.get('profile')
+    payload = plan.get('request')
+    if (plan.get('action') != 'submit-profile' or not isinstance(payload, dict)
+            or not isinstance(profile, dict) or set(payload) != {'fields', 'operation_id', *PROFILE_STAMPS}):
+        raise ClientError('请传入完整的个人资料预览。')
+    if plan.get('base_url') != config['base_url'] or profile.get('id') != config['profile_id']:
+        raise ClientError('当前配置与计划的服务或档案不同，请重新生成计划并确认。')
+    current = profile_document(config)
+    if current['binding_revision'] != plan.get('binding_revision'):
+        raise ClientError('关联档案已变化，请重新预览并确认。')
+    return request(config, PROFILE, body=payload)
+
+
 def read_input(path):
     try:
         content = sys.stdin.buffer.read() if path == '-' else Path(path).read_bytes()
@@ -248,7 +304,7 @@ def read_input(path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='维护创智龙本人论文与项目')
+    parser = argparse.ArgumentParser(description='维护创智龙本人论文、项目和个人资料')
     parser.add_argument('--version', action='version', version=f'sii-long-profile {VERSION}',
                         help='显示本机安装的 Skill 版本')
     commands = parser.add_subparsers(dest='command', required=True)
@@ -256,8 +312,11 @@ def main():
     setup.add_argument('--base-url', default=DEFAULT_BASE)
     commands.add_parser('check', help='核对令牌关联的档案')
     commands.add_parser('list', help='读取本人档案和成果审核状态')
+    commands.add_parser('profile', help='读取本人简介、研究方向和主页链接')
     for command, help_text in (('prepare-submit', '整理成果字段，生成送审预览'),
-                               ('submit', '提交已确认的成果送审')):
+                               ('submit', '提交已确认的成果送审'),
+                               ('prepare-profile', '整理个人资料字段，生成保存预览'),
+                               ('submit-profile', '保存已确认的个人资料')):
         commands.add_parser(command, help=help_text).add_argument('input', nargs='?', default='-')
     args = parser.parse_args()
     try:
@@ -268,6 +327,12 @@ def main():
             config = load_config(store)
             if args.command == 'submit':
                 result = submit_plan(config, read_input(args.input))
+            elif args.command == 'submit-profile':
+                result = submit_profile(config, read_input(args.input))
+            elif args.command in {'profile', 'prepare-profile'}:
+                current = profile_document(config)
+                result = current if args.command == 'profile' else plan_profile(
+                    config, current, read_input(args.input))
             else:
                 data = listing(config)
                 if args.command == 'check':

@@ -11,3 +11,22 @@
 - 新增项目须提供项目名称、简介和本人角色。日期使用 `YYYY-MM-DD`。
 - 编辑档案中的论文时须保留题名。项目库条目须保留项目名称和本人角色，其他档案项目须保留项目名称和简介。缺少必填资料时向导师核实。
 - 项目审核通过后，现有合并规则只会补充已有项目的空简介和空角色。改动这些已有值时应告诉导师这一限制。
+
+## 个人资料字段
+
+`prepare-profile` 接收 `{"fields":{...}}`，只包含本次要修改的字段。预览返回这些字段的原值 `before` 和新值 `after`。字段值均为字符串，空字符串表示清空。
+
+| 字段 | 内容 |
+| --- | --- |
+| `bio` | 个人简介 |
+| `research_focus` | 研究方向，多个方向用顿号分隔 |
+| `homepage_url` | 个人主页 |
+| `scholar_url` | Google Scholar |
+| `github_url` | GitHub |
+| `huggingface_url` | Hugging Face |
+| `orcid_url` | ORCID |
+| `dblp_url` | DBLP |
+| `openalex_url` | OpenAlex |
+| `other_homepages` | 其它论文来源主页。每行一个链接，可在链接前注明来源名称 |
+
+链接填写完整的 HTTP 或 HTTPS 地址。服务会校验协议和域名，不能包含登录凭据。
